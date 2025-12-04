@@ -42,7 +42,8 @@ export default function App() {
 
   // --- [설정 로드 & 저장] ---
   const loadData = (selectedSport) => {
-    const key = selectedSport === 'soccer' ? 'fc_save_v16' : 'nba_save_v16'; // 버전 업데이트
+    // 버전 충돌 방지를 위해 v18로 업데이트
+    const key = selectedSport === 'soccer' ? 'fc_save_v18' : 'nba_save_v18'; 
     const saved = localStorage.getItem(key);
 
     // 데이터 소스 선택
@@ -53,15 +54,20 @@ export default function App() {
     if (saved) {
       const parsed = JSON.parse(saved);
       setMoney(parsed.money);
-      setMySquad(parsed.mySquad);
+      // [중요] 기존 데이터에 uid가 없는 경우를 대비해 안전장치 추가
+      const safeSquad = parsed.mySquad.map((p, idx) => ({
+        ...p,
+        uid: p.uid || Date.now() + idx + Math.random()
+      }));
+      setMySquad(safeSquad);
     } else {
-      // 초기화 (Starter Pack 11명/5명 지급)
+      // 초기화 (Starter Pack)
       const starters = [];
       for(let i=0; i<squadSize; i++) {
         const rnd = dataSrc[Math.floor(Math.random()*dataSrc.length)];
         starters.push({ ...rnd, uid: Date.now()+i, level: 1 });
       }
-      setMoney(selectedSport === 'soccer' ? 100000000000 : 50000000); 
+      setMoney(selectedSport === 'soccer' ? 50000000000 : 50000000); // 초기 자금 상향
       setMySquad(starters);
     }
 
@@ -72,7 +78,7 @@ export default function App() {
   // 자동 저장
   useEffect(() => {
     if (!sport) return;
-    const key = sport === 'soccer' ? 'fc_save_v16' : 'nba_save_v16';
+    const key = sport === 'soccer' ? 'fc_save_v18' : 'nba_save_v18';
     localStorage.setItem(key, JSON.stringify({ money, mySquad }));
   }, [money, mySquad, sport]);
 
@@ -85,7 +91,7 @@ export default function App() {
 
   // --- [유틸리티] ---
   const showToast = (msg) => { setToast({ show: true, msg }); setTimeout(() => setToast({ show: false, msg: '' }), 2000); };
-  const handleImgError = (e) => { e.target.onerror=null; e.target.src="https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png"; };
+  const handleImgError = (e) => { e.target.onerror=null; e.target.src="https://placehold.co/100?text=No+Img"; };
 
   const formatMoney = (val) => {
     if (sport === 'soccer') {
@@ -98,7 +104,8 @@ export default function App() {
   const getPrice = (ovr, lvl) => {
     const base = sport === 'soccer' ? 500000000 : 10000;
     const baseline = sport === 'soccer' ? 100 : 100; 
-    return Math.floor(base * Math.pow(1.1, ovr-baseline) * (lvl*lvl));
+    // 레벨에 따른 가격 상승폭 증가
+    return Math.floor(base * Math.pow(1.1, ovr-baseline) * (lvl * lvl));
   };
 
   const getCardColor = (lvl) => {
@@ -120,16 +127,26 @@ export default function App() {
     const cost = getPrice(p.ovr, 1);
     if (money < cost) { showToast("잔액이 부족합니다!"); return; }
     setMoney(prev => prev - cost);
-    setMySquad(prev => [{ ...p, uid: Date.now()+Math.random(), level: 1 }, ...prev]);
+    // [중요] 구매 시 고유 UID 생성 강화
+    setMySquad(prev => [{ ...p, uid: Date.now() + Math.random(), level: 1 }, ...prev]);
     showToast(`🎉 ${p.name} 영입 성공!`);
   };
 
   const sellPlayer = (p) => {
+    // [수정] 방출 로직 안전성 강화
+    if (!p.uid) { showToast("오류: 선수 데이터 갱신 필요"); return; }
+
     const val = getPrice(p.ovr, p.level);
-    if(confirm(`${p.name} 판매하시겠습니까? (${formatMoney(val)})`)) {
+    if(window.confirm(`${p.name} (+${p.level}) 판매하시겠습니까? (${formatMoney(val)})`)) {
       setMoney(prev => prev + val);
+
+      // UID로 정확히 제거
       setMySquad(prev => prev.filter(x => x.uid !== p.uid));
-      if(lineup.includes(p.uid)) setLineup(prev => prev.map(u => u===p.uid ? null : u));
+
+      // 라인업에서도 제거
+      if(lineup.includes(p.uid)) {
+        setLineup(prev => prev.map(u => u === p.uid ? null : u));
+      }
       showToast("💰 판매 완료");
     }
   };
@@ -159,7 +176,12 @@ export default function App() {
     const newArr = Array(slots.length).fill(null);
     const used = new Set();
     slots.forEach((pos, idx) => {
-      const cand = mySquad.filter(x => x.pos === pos && !used.has(x.uid)).sort((a,b)=>(b.ovr+b.level*2)-(a.ovr+a.level*2));
+      // 포지션 매칭 로직 (G=G, F=F 등)
+      const cand = mySquad.filter(x => {
+        // 농구 포지션 유연성 (G,F,C) / 축구 (GK,DF,MF,FW)
+        return x.pos === pos && !used.has(x.uid);
+      }).sort((a,b)=>(b.ovr+b.level*2)-(a.ovr+a.level*2));
+
       if(cand.length>0) { newArr[idx]=cand[0].uid; used.add(cand[0].uid); }
     });
     setLineup(newArr);
@@ -200,7 +222,7 @@ export default function App() {
 
           // ⚽ 축구 로직
           if (sport === 'soccer') {
-             newTime += 1; // 1분씩 증가
+             newTime += 2; // 시간 가속
              const end = 90; 
              if (newTime >= end) finished = true;
 
@@ -233,7 +255,7 @@ export default function App() {
           }
           return { ...prev, q, time: newTime, score: newScore, logs: newLogs };
         });
-      }, sport==='soccer'?50:150);
+      }, sport==='soccer'?50:100);
     }
     return () => clearInterval(interval);
   }, [screen, matchState.isPlaying, sport]);
@@ -257,7 +279,7 @@ export default function App() {
       <div style={styles.container}>
         <div style={{textAlign:'center', marginTop:'100px'}}>
           <h1 style={{color:'#fff', fontSize:'28px', marginBottom:'10px'}}>MULTI SPORTS MANAGER</h1>
-          <p style={{color:'#aaa', marginBottom:'50px'}}>v16.0 Ultimate Team Edition</p>
+          <p style={{color:'#aaa', marginBottom:'50px'}}>v18.0 Ultimate Team Edition</p>
           <div style={{display:'flex', flexDirection:'column', gap:'20px'}}>
             <button onClick={()=>{setSport('soccer'); loadData('soccer'); setScreen('lobby');}} style={{...styles.selectBtn, background: 'linear-gradient(45deg, #11998e, #38ef7d)'}}>
                ⚽ 축구 (FC STYLE)
@@ -304,7 +326,6 @@ export default function App() {
       {/* --- MARKET (이적시장) --- */}
       {screen === 'market' && (
         <>
-          {/* 🔥 팀 필터 (가로 스크롤) */}
           <div style={styles.teamScroll}>
              <button onClick={()=>setTeamFilter('ALL')} style={teamFilter==='ALL'?{...styles.teamBadge, background:'#fff', color:'#000'}:styles.teamBadge}>ALL</button>
              {currentTeams.map(t=>(
@@ -320,19 +341,16 @@ export default function App() {
           <div style={styles.list}>
              {(marketTab==='buy' ? dataList : mySquad)
                 .filter(p => {
-                   // 🔥 [팀컬러 필터 핵심 로직]
-                   // p.team이 배열(Array)이므로 includes를 사용
                    const isTeamMatch = teamFilter === 'ALL' || (Array.isArray(p.team) ? p.team.includes(teamFilter) : p.team === teamFilter);
                    const isNameMatch = p.name.includes(searchText);
                    return isTeamMatch && isNameMatch;
                 })
-                .map(p=>(
-               <div key={p.uid||p.id} style={styles.card} onClick={()=>marketTab==='buy'?buyPlayer(p):sellPlayer(p)}>
+                .map((p, idx)=>(
+               <div key={`${p.uid || p.id}_${idx}`} style={styles.card} onClick={()=>marketTab==='buy'?buyPlayer(p):sellPlayer(p)}>
                   <img src={p.img} style={styles.face} onError={handleImgError}/>
                   <div>
-                     <div style={{fontWeight:'bold'}}>{p.name}</div>
+                     <div style={{fontWeight:'bold'}}>{p.name} {p.level && `(+${p.level})`}</div>
                      <div style={{fontSize:'10px', color:'#aaa'}}>
-                       {/* 팀이 배열이면 첫 번째 팀(현재 팀)만 표시 */}
                        {Array.isArray(p.team) ? p.team[0] : p.team} | {p.pos}
                      </div>
                   </div>
