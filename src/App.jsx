@@ -42,7 +42,6 @@ export default function App() {
 
   // --- [설정 로드 & 저장] ---
   const loadData = (selectedSport) => {
-    // 버전 충돌 방지를 위해 v18로 업데이트
     const key = selectedSport === 'soccer' ? 'fc_save_v18' : 'nba_save_v18'; 
     const saved = localStorage.getItem(key);
 
@@ -54,7 +53,7 @@ export default function App() {
     if (saved) {
       const parsed = JSON.parse(saved);
       setMoney(parsed.money);
-      // [중요] 기존 데이터에 uid가 없는 경우를 대비해 안전장치 추가
+      // 안전장치: uid 복구
       const safeSquad = parsed.mySquad.map((p, idx) => ({
         ...p,
         uid: p.uid || Date.now() + idx + Math.random()
@@ -67,7 +66,7 @@ export default function App() {
         const rnd = dataSrc[Math.floor(Math.random()*dataSrc.length)];
         starters.push({ ...rnd, uid: Date.now()+i, level: 1 });
       }
-      setMoney(selectedSport === 'soccer' ? 50000000000 : 50000000); // 초기 자금 상향
+      setMoney(selectedSport === 'soccer' ? 50000000000 : 50000000); 
       setMySquad(starters);
     }
 
@@ -104,7 +103,6 @@ export default function App() {
   const getPrice = (ovr, lvl) => {
     const base = sport === 'soccer' ? 500000000 : 10000;
     const baseline = sport === 'soccer' ? 100 : 100; 
-    // 레벨에 따른 가격 상승폭 증가
     return Math.floor(base * Math.pow(1.1, ovr-baseline) * (lvl * lvl));
   };
 
@@ -114,7 +112,6 @@ export default function App() {
     return sport === 'soccer' ? "linear-gradient(135deg, #2b5876, #4e4376)" : "linear-gradient(135deg, #002d62, #000)";
   };
 
-  // 현재 모드에 따른 데이터
   const themeColor = sport === 'soccer' ? '#00e676' : '#ff5722';
   const dataList = sport === 'soccer' ? SOCCER_DATA : NBA_DATA;
   const currentTeams = sport === 'soccer' ? TEAMS_SOCCER : TEAMS_NBA;
@@ -127,26 +124,17 @@ export default function App() {
     const cost = getPrice(p.ovr, 1);
     if (money < cost) { showToast("잔액이 부족합니다!"); return; }
     setMoney(prev => prev - cost);
-    // [중요] 구매 시 고유 UID 생성 강화
     setMySquad(prev => [{ ...p, uid: Date.now() + Math.random(), level: 1 }, ...prev]);
     showToast(`🎉 ${p.name} 영입 성공!`);
   };
 
   const sellPlayer = (p) => {
-    // [수정] 방출 로직 안전성 강화
     if (!p.uid) { showToast("오류: 선수 데이터 갱신 필요"); return; }
-
     const val = getPrice(p.ovr, p.level);
-    if(window.confirm(`${p.name} (+${p.level}) 판매하시겠습니까? (${formatMoney(val)})`)) {
+    if(window.confirm(`${p.name} 판매하시겠습니까? (${formatMoney(val)})`)) {
       setMoney(prev => prev + val);
-
-      // UID로 정확히 제거
       setMySquad(prev => prev.filter(x => x.uid !== p.uid));
-
-      // 라인업에서도 제거
-      if(lineup.includes(p.uid)) {
-        setLineup(prev => prev.map(u => u === p.uid ? null : u));
-      }
+      if(lineup.includes(p.uid)) setLineup(prev => prev.map(u => u === p.uid ? null : u));
       showToast("💰 판매 완료");
     }
   };
@@ -176,12 +164,7 @@ export default function App() {
     const newArr = Array(slots.length).fill(null);
     const used = new Set();
     slots.forEach((pos, idx) => {
-      // 포지션 매칭 로직 (G=G, F=F 등)
-      const cand = mySquad.filter(x => {
-        // 농구 포지션 유연성 (G,F,C) / 축구 (GK,DF,MF,FW)
-        return x.pos === pos && !used.has(x.uid);
-      }).sort((a,b)=>(b.ovr+b.level*2)-(a.ovr+a.level*2));
-
+      const cand = mySquad.filter(x => x.pos === pos && !used.has(x.uid)).sort((a,b)=>(b.ovr+b.level*2)-(a.ovr+a.level*2));
       if(cand.length>0) { newArr[idx]=cand[0].uid; used.add(cand[0].uid); }
     });
     setLineup(newArr);
@@ -220,28 +203,21 @@ export default function App() {
           let newLogs = [...logs];
           let finished = false;
 
-          // ⚽ 축구 로직
           if (sport === 'soccer') {
-             newTime += 2; // 시간 가속
-             const end = 90; 
-             if (newTime >= end) finished = true;
-
+             newTime += 2;
+             if (newTime >= 90) finished = true;
              const myP = 100 + formationList[myFormation].atk;
              const aiP = 100 + DIFFICULTIES[difficulty].bonus;
-
              if(Math.random() < 0.05 + (myP-aiP)*0.001) { newScore.my++; newLogs.unshift(`⚽ GOAL! (${newTime}')`); }
              if(Math.random() < 0.05 - (myP-aiP)*0.001) { newScore.ai++; newLogs.unshift(`⚽ 실점... (${newTime}')`); }
-          } 
-          // 🏀 농구 로직
-          else {
-             newTime -= 0.5; // 30초씩 감소
+          } else {
+             newTime -= 0.5;
              if (newTime <= 0) {
                 if (q < 4) { q++; newTime = 12.0; newLogs.unshift(`🏀 ${q}쿼터 시작`); }
                 else finished = true;
              }
              const myP = 100 + formationList[myFormation].atk;
              const aiP = 100 + DIFFICULTIES[difficulty].bonus;
-
              if(Math.random() < 0.4 + (myP-aiP)*0.01) { 
                const pts = Math.random()>0.6?3:2; newScore.my+=pts; if(Math.random()<0.3) newLogs.unshift(`🔥 ${pts}점 성공!`); 
              }
@@ -271,9 +247,7 @@ export default function App() {
   };
 
 
-  // --- [렌더링 - JSX] ---
-
-  // 1. [메인]
+  // --- [렌더링] ---
   if (!sport) {
     return (
       <div style={styles.container}>
@@ -293,7 +267,6 @@ export default function App() {
     )
   }
 
-  // 2. [로비]
   if (screen === 'lobby') {
     return (
       <div style={styles.container}>
@@ -312,7 +285,6 @@ export default function App() {
     )
   }
 
-  // 3. [공통 기능]
   return (
     <div style={styles.container}>
       {toast.show && <div style={styles.toast}>{toast.msg}</div>}
@@ -323,7 +295,6 @@ export default function App() {
          <div style={{fontSize:'12px'}}>{formatMoney(money)}</div>
       </div>
 
-      {/* --- MARKET (이적시장) --- */}
       {screen === 'market' && (
         <>
           <div style={styles.teamScroll}>
@@ -332,7 +303,6 @@ export default function App() {
                 <button key={t} onClick={()=>setTeamFilter(t)} style={teamFilter===t?{...styles.teamBadge, background:themeColor, border:`1px solid ${themeColor}`}:styles.teamBadge}>{t}</button>
              ))}
           </div>
-
           <input style={styles.input} placeholder="이름 검색..." value={searchText} onChange={e=>setSearchText(e.target.value)} />
           <div style={styles.tabBox}>
              <button onClick={()=>setMarketTab('buy')} style={marketTab==='buy'?{...styles.tab, background:themeColor}:{...styles.tab}}>영입</button>
@@ -342,17 +312,14 @@ export default function App() {
              {(marketTab==='buy' ? dataList : mySquad)
                 .filter(p => {
                    const isTeamMatch = teamFilter === 'ALL' || (Array.isArray(p.team) ? p.team.includes(teamFilter) : p.team === teamFilter);
-                   const isNameMatch = p.name.includes(searchText);
-                   return isTeamMatch && isNameMatch;
+                   return isTeamMatch && p.name.includes(searchText);
                 })
                 .map((p, idx)=>(
                <div key={`${p.uid || p.id}_${idx}`} style={styles.card} onClick={()=>marketTab==='buy'?buyPlayer(p):sellPlayer(p)}>
                   <img src={p.img} style={styles.face} onError={handleImgError}/>
                   <div>
                      <div style={{fontWeight:'bold'}}>{p.name} {p.level && `(+${p.level})`}</div>
-                     <div style={{fontSize:'10px', color:'#aaa'}}>
-                       {Array.isArray(p.team) ? p.team[0] : p.team} | {p.pos}
-                     </div>
+                     <div style={{fontSize:'10px', color:'#aaa'}}>{Array.isArray(p.team)?p.team[0]:p.team} | {p.pos}</div>
                   </div>
                   <div style={{marginLeft:'auto', color:'#ffeb3b', fontSize:'12px'}}>{formatMoney(getPrice(p.ovr, p.level||1))}</div>
                </div>
@@ -361,7 +328,6 @@ export default function App() {
         </>
       )}
 
-      {/* --- ENHANCE (강화) --- */}
       {screen === 'enhance' && (
         enhanceTarget ? (
           <div style={{textAlign:'center'}}>
@@ -398,7 +364,6 @@ export default function App() {
         )
       )}
 
-      {/* --- LINEUP (라인업) --- */}
       {screen === 'lineup' && (
         <>
           {modalSlot && (
@@ -426,13 +391,23 @@ export default function App() {
              </select>
              <button onClick={autoLineup} style={styles.miniBtn}>자동 선발</button>
           </div>
-          <div style={{...styles.pitch, background: sport==='soccer'?'#1b5e20':'#1a1a1a', border: sport==='soccer'?'2px solid #fff':'2px solid #ff5722'}}>
+
+          {/* 🔥 수정된 경기장 (깨짐 방지) */}
+          <div style={{
+              ...styles.pitch, 
+              background: sport==='soccer'?'#1b5e20':'#1a1a1a', 
+              border: sport==='soccer'?'2px solid #fff':'2px solid #ff5722'
+            }}>
              {formationList[myFormation].slots.map((pos, idx)=>{
                const p = mySquad.find(x=>x.uid===lineup[idx]);
                return (
-                 <div key={idx} onClick={()=>setModalSlot({idx, pos})} style={styles.slot}>
+                 <div key={idx} onClick={()=>setModalSlot({idx, pos})} style={{
+                    ...styles.slot,
+                    // 🔥 핵심 수정: 종목별 슬롯 크기 자동 조절
+                    width: sport === 'soccer' ? '22%' : '30%', 
+                 }}>
                     <div style={{fontSize:'10px', color:'#aaa'}}>{pos}</div>
-                    {p ? <><img src={p.img} style={{width:'30px', borderRadius:'50%'}} onError={handleImgError}/><div style={{fontSize:'9px'}}>{p.name}</div></> : <div style={{fontSize:'20px'}}>+</div>}
+                    {p ? <><img src={p.img} style={{width:'30px', borderRadius:'50%'}} onError={handleImgError}/><div style={{fontSize:'9px', whiteSpace:'nowrap', overflow:'hidden', maxWidth:'100%'}}>{p.name}</div></> : <div style={{fontSize:'20px'}}>+</div>}
                  </div>
                )
              })}
@@ -441,7 +416,6 @@ export default function App() {
         </>
       )}
 
-      {/* --- MATCH (경기) --- */}
       {screen === 'match' && (
          <>
             <div style={{background:'#222', padding:'20px', borderRadius:'10px', marginBottom:'10px', display:'flex', justifyContent:'space-between', fontSize:'24px', fontWeight:'bold'}}>
@@ -461,7 +435,7 @@ export default function App() {
 
 // --- [스타일] ---
 const styles = {
-  container: { maxWidth:'500px', margin:'0 auto', padding:'20px', background:'#121212', minHeight:'100vh', color:'#fff', fontFamily:'sans-serif', position:'relative' },
+  container: { maxWidth:'500px', margin:'0 auto', padding:'20px', background:'#121212', minHeight:'100vh', color:'#fff', fontFamily:'sans-serif', position:'relative', boxSizing:'border-box' },
   selectBtn: { width:'100%', padding:'30px', fontSize:'20px', fontWeight:'bold', color:'#fff', border:'none', borderRadius:'15px', cursor:'pointer' },
   topBar: { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px', background:'#1e1e1e', borderRadius:'10px' },
   menuGrid: { display:'grid', gap:'15px', marginTop:'30px' },
@@ -478,8 +452,13 @@ const styles = {
   actionBtn: { width:'100%', padding:'15px', color:'#000', border:'none', borderRadius:'10px', fontWeight:'bold', cursor:'pointer', fontSize:'16px' },
   hScroll: { display:'flex', overflowX:'auto', gap:'10px', padding:'10px 0' },
   miniCard: { minWidth:'60px', padding:'5px', background:'#333', borderRadius:'5px', textAlign:'center', cursor:'pointer' },
-  pitch: { display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'5px', padding:'10px', borderRadius:'10px', minHeight:'300px' },
-  slot: { background:'rgba(0,0,0,0.5)', aspectRatio:'1/1', borderRadius:'50%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', border:'1px dashed #aaa', cursor:'pointer' },
+
+  // 🔥 [수정됨] Pitch: Flexbox로 변경하여 자동 줄바꿈 및 정렬
+  pitch: { display:'flex', flexWrap:'wrap', justifyContent:'center', alignContent:'center', gap:'5px', padding:'20px 5px', borderRadius:'10px', minHeight:'300px', boxSizing:'border-box', width:'100%' },
+
+  // 🔥 [수정됨] Slot: aspectRatio 유지하되 크기는 JSX에서 제어
+  slot: { background:'rgba(0,0,0,0.5)', aspectRatio:'1/1', borderRadius:'50%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', border:'1px dashed #aaa', cursor:'pointer', boxSizing:'border-box' },
+
   modal: { position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.8)', zIndex:1000, display:'flex', justifyContent:'center', alignItems:'center' },
   modalBox: { width:'90%', maxWidth:'400px', background:'#181818', padding:'20px', borderRadius:'15px', maxHeight:'80vh', overflowY:'auto', border:'1px solid #333' },
   toast: { position:'fixed', bottom:'30px', left:'50%', transform:'translateX(-50%)', background:'rgba(0,255,100,0.9)', color:'#000', padding:'10px 20px', borderRadius:'30px', zIndex:2000, fontWeight:'bold', animation:'fadeIn 0.3s' },
