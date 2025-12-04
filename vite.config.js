@@ -10,7 +10,7 @@ export default defineConfig({
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Sports Squad Sim',
-        short_name: 'Sports Squad Sim',
+        short_name: 'SquadSim',
         description: 'Soccer & NBA Team Manager Game',
         theme_color: '#1a1a2e',
         background_color: '#1a1a2e',
