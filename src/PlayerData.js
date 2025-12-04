@@ -321,8 +321,12 @@ export const SOCCER_DATA = [
   { id: 2137, name: '테일러 하우드-벨리스', team: ['사우스햄튼', '맨체스터 City', '번리'], pos: 'DF', ovr: 108, img: 'https://upload.wikimedia.org/wikipedia/commons/5/5a/Taylor_Harwood-Bellis_2022.jpg' },
   { id: 2138, name: '조 아리보', team: ['사우스햄튼', '레인저스'], pos: 'MF', ovr: 107, img: 'https://upload.wikimedia.org/wikipedia/commons/5/5a/Joe_Aribo_2022.jpg' },
   { id: 2139, name: '벤 브레레톤 디아스', team: ['사우스햄튼', '비야레알', '셰필드', '블랙번'], pos: 'FW', ovr: 107, img: 'https://upload.wikimedia.org/wikipedia/commons/5/5a/Ben_Brereton_D%C3%ADaz_2022.jpg' },
+];
 
-  // ==================== [NBA DATA] ====================
+// ==============================================================================
+// 3. [NBA 데이터] - NBA 현역 로스터 + 레전드
+// ==============================================================================
+export const NBA_DATA = [
   // 1. Boston Celtics
   { id: 1016, name: '제이슨 테이텀', team: ['Celtics'], pos: 'F', ovr: 112, img: 'https://upload.wikimedia.org/wikipedia/commons/c/c2/Jayson_Tatum_2022.jpg' },
   { id: 1040, name: '제일런 브라운', team: ['Celtics'], pos: 'F', ovr: 110, img: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Jaylen_Brown_2022.jpg' },
