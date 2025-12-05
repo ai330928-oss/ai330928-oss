@@ -177,18 +177,18 @@ export default function App() {
     let oppName = opponent;
     let diff = difficulty;
 
-    // 🔥 [수정] 토너먼트 로직 강화
+    // 🔥 [수정] 토너먼트 로직: 라운드별 난이도 설정
     if (gameMode === 'tournament') {
        const teams = sport === 'soccer' ? TEAMS_SOCCER : TEAMS_NBA;
-       // 매 라운드마다 랜덤 팀 배정 (실제 느낌)
+       // 새 상대 랜덤 배정
        oppName = teams[Math.floor(Math.random()*teams.length)]; 
        setOpponent(oppName);
 
-       // 라운드별 난이도 조정
        if(round === 16) diff = '초급';
        else if(round === 8) diff = '중급';
        else if(round === 4) diff = '고급';
        else if(round === 2) diff = '월드클래스';
+
        setDifficulty(diff);
     }
 
@@ -211,6 +211,7 @@ export default function App() {
           let newLogs = [...logs];
           let finished = false;
 
+          // 종목별 점수/시간 로직
           if (sport === 'soccer') {
              newTime += 2;
              if (newTime >= 90) finished = true;
@@ -249,22 +250,24 @@ export default function App() {
        const reward = sport==='soccer' ? 500000000 : 3000000;
        setMoney(prev => prev + reward);
 
-       // 🔥 [수정] 토너먼트 진행 로직
+       // 🔥 [핵심 수정] 토너먼트 진행 로직
        if(gameMode === 'tournament') {
           if (round === 2) {
-             // 결승 승리 -> 우승
+             // 결승 승리 -> 우승 처리
              showToast(`🏆🏆🏆 토너먼트 우승!!! (${formatMoney(reward*10)} 획득)`);
              setMoney(prev => prev + (reward * 10)); // 우승 보너스
-             setRound(16); // 초기화
+             setRound(16); // 라운드 초기화
              setScreen('lobby');
           } else {
-             // 다음 라운드 진출
+             // 16강, 8강, 4강 승리 -> 다음 라운드 진출
              const nextRound = round / 2;
              setRound(nextRound);
-             showToast(`🎉 ${nextRound===2 ? '결승' : nextRound+'강'} 진출!`);
-             setScreen('lineup'); // 로비로 안 가고 바로 다음 경기 준비
+             showToast(`🎉 승리! ${nextRound === 2 ? '결승' : nextRound+'강'} 진출!`);
+             // 로비로 가지 않고 즉시 라인업 화면 유지 (다음 경기 준비)
+             setScreen('lineup'); 
           }
        } else {
+          // 친선 경기 승리
           showToast(`💰 승리 보상 획득!`);
           setScreen('lobby');
        }
@@ -418,10 +421,13 @@ export default function App() {
              </div>
           )}
 
-          {/* 🔥 [수정] 토너먼트 시 현재 라운드 표시 */}
+          {/* 🔥 [추가됨] 토너먼트 라운드 표시 UI */}
           {gameMode === 'tournament' && (
-            <div style={{textAlign:'center', marginBottom:'10px', color:'#ff9800', fontWeight:'bold', fontSize:'18px'}}>
-              🏆 {round === 2 ? '결승전 (Final)' : `${round}강 토너먼트`}
+            <div style={{textAlign:'center', marginBottom:'15px', padding:'10px', background:'#333', borderRadius:'10px', border:`1px solid ${themeColor}`}}>
+              <div style={{color:'#aaa', fontSize:'12px'}}>현재 라운드</div>
+              <div style={{color:themeColor, fontWeight:'bold', fontSize:'20px'}}>
+                {round === 2 ? '🏆 결승전 (FINAL)' : `🏆 ${round}강 토너먼트`}
+              </div>
             </div>
           )}
 
@@ -456,6 +462,12 @@ export default function App() {
 
       {screen === 'match' && (
          <>
+            {/* 경기 화면 상단에도 라운드 표시 */}
+            {gameMode === 'tournament' && (
+               <div style={{textAlign:'center', color:'#aaa', fontSize:'12px', marginBottom:'5px'}}>
+                  {round === 2 ? '결승전' : `${round}강전`} - 난이도: {difficulty}
+               </div>
+            )}
             <div style={{background:'#222', padding:'20px', borderRadius:'10px', marginBottom:'10px', display:'flex', justifyContent:'space-between', fontSize:'24px', fontWeight:'bold'}}>
                <div style={{color:themeColor}}>{matchState.score.my}</div>
                <div style={{fontSize:'14px', textAlign:'center', color:'#aaa'}}>{sport==='soccer'?`${matchState.time}'`:`Q${matchState.q}`}</div>
@@ -464,9 +476,11 @@ export default function App() {
             <div style={{height:'300px', overflowY:'auto', background:'#111', padding:'10px', borderRadius:'10px'}}>
                {matchState.logs.map((l,i)=><div key={i} style={{fontSize:'12px', padding:'4px', borderBottom:'1px solid #333', color:l.includes('GOAL')||l.includes('성공')?'yellow':'#fff'}}>{l}</div>)}
             </div>
-            {matchState.isFinished && <button onClick={endMatch} style={{...styles.actionBtn, background:themeColor, marginTop:'10px'}}>
-              {gameMode==='tournament' && matchState.winner && round > 2 ? '다음 라운드' : '나가기'}
-            </button>}
+            {matchState.isFinished && (
+               <button onClick={endMatch} style={{...styles.actionBtn, background:themeColor, marginTop:'10px'}}>
+                 {gameMode==='tournament' && matchState.winner && round > 2 ? '다음 라운드 진출 ➡️' : '나가기'}
+               </button>
+            )}
          </>
       )}
     </div>
