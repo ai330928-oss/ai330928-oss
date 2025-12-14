@@ -13,10 +13,10 @@ export const TEAMS_SOCCER = [
 ];
 
 export const SOCCER_FORMATIONS = {
-  '4-4-2': { name: '4-4-2 플랫', slots: ['GK','DF','DF','DF','DF','MF','MF','MF','MF','FW','FW'], atk: 0 },
-  '4-3-3': { name: '4-3-3 공격', slots: ['GK','DF','DF','DF','DF','MF','MF','MF','FW','FW','FW'], atk: 5 },
-  '3-5-2': { name: '3-5-2 윙백', slots: ['GK','DF','DF','DF','MF','MF','MF','MF','MF','FW','FW'], atk: 3 },
-  '5-4-1': { name: '5-4-1 수비', slots: ['GK','DF','DF','DF','DF','DF','MF','MF','MF','MF','FW'], atk: -5 },
+  '4-4-2': { name: '4-4-2 플랫', slots: ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'], atk: 0 },
+  '4-3-3': { name: '4-3-3 공격', slots: ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'FW'], atk: 5 },
+  '3-5-2': { name: '3-5-2 윙백', slots: ['GK', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'], atk: 3 },
+  '5-4-1': { name: '5-4-1 수비', slots: ['GK', 'DF', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW'], atk: -5 },
 };
 
 export const SOCCER_DATA = [
@@ -130,7 +130,7 @@ export const SOCCER_DATA = [
 // ---------------- [NBA CONFIG] ----------------
 
 export const TEAMS_NBA = [
-  "레이커스", "워리어스", "너게츠", "선즈", "벅스", 
+  "레이커스", "워리어스", "너게츠", "선즈", "벅스",
   "셀틱스", "식서스", "매버릭스", "클리퍼스", "히트",
   "썬더", "울브스", "닉스", "스퍼스", "페이서스",
   "킹스", "그리즐리스", "캐벌리어스", "매직", "펠리컨스",
@@ -138,10 +138,10 @@ export const TEAMS_NBA = [
 ];
 
 export const NBA_FORMATIONS = {
-  'Balanced': { name: '밸런스 (기본)', slots: ['G','G','F','F','C'], atk: 0 },
-  'Small Ball': { name: '스몰 볼 (런앤건)', slots: ['G','G','G','F','F'], atk: 3 },
-  'Twin Tower': { name: '트윈 타워 (높이)', slots: ['G','G','F','C','C'], atk: -2 },
-  'Defense': { name: '질식 수비', slots: ['G','F','F','F','C'], atk: -5 },
+  'Balanced': { name: '밸런스 (기본)', slots: ['G', 'G', 'F', 'F', 'C'], atk: 0 },
+  'Small Ball': { name: '스몰 볼 (런앤건)', slots: ['G', 'G', 'G', 'F', 'F'], atk: 3 },
+  'Twin Tower': { name: '트윈 타워 (높이)', slots: ['G', 'G', 'F', 'C', 'C'], atk: -2 },
+  'Defense': { name: '질식 수비', slots: ['G', 'F', 'F', 'F', 'C'], atk: -5 },
 };
 
 export const NBA_DATA = [
@@ -219,9 +219,27 @@ export const NBA_DATA = [
 ];
 
 // ---------------- [COMMON] ----------------
+// 🔥 [수정됨] 난이도 밸런스 조정 - 공정한 경기 밸런스
 export const DIFFICULTIES = {
-  '초급': { bonus: 0 },
-  '중급': { bonus: 20 },
-  '고급': { bonus: 40 },
-  '월드클래스': { bonus: 60 }
+  '초급': { bonus: -15, description: '입문자용 (승리 확률 높음)' },
+  '중급': { bonus: 0, description: '일반적인 난이도' },
+  '고급': { bonus: 15, description: '도전적인 난이도 (승리 어려움)' }
+};
+
+// 🔥 [완전 개편] 강화 확률 테이블 (1~13강)
+// 1~5강: 매우 높은 확률, 6강부터 급격히 하락
+export const ENHANCE_RATES = {
+  1: { success: 100, downgrade: false },  // 1→2: 100%
+  2: { success: 95, downgrade: false },   // 2→3: 95%
+  3: { success: 90, downgrade: false },   // 3→4: 90%
+  4: { success: 80, downgrade: false },   // 4→5: 80% (여기까지 혜자)
+  5: { success: 50, downgrade: false },   // 5→6: 50% (확률 반토막)
+  6: { success: 30, downgrade: false },   // 6→7: 30% (어려워짐)
+  7: { success: 25, downgrade: true },    // 7→8: 25%, 실패시 하락 시작
+  8: { success: 20, downgrade: true },    // 8→9: 20%
+  9: { success: 15, downgrade: true },    // 9→10: 15%
+  10: { success: 10, downgrade: true },   // 10→11: 10%
+  11: { success: 7, downgrade: true },    // 11→12: 7%
+  12: { success: 5, downgrade: true },    // 12→13: 5% (극악)
+  13: { success: 0, downgrade: false }    // 13강 = 만렙
 };
