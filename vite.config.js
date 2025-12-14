@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Sports Squad Sim',
-        short_name: 'SquadSim',
+        name: 'MultiSports Manager',
+        short_name: 'MultiSports',
         description: 'Soccer & NBA Team Manager Game',
         theme_color: '#1a1a2e',
         background_color: '#1a1a2e',
