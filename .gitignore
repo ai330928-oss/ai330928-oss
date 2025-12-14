@@ -4,3 +4,5 @@ dev-dist/
 database.sqlite
 .env
 .DS_Store
+.local/
+*.log
